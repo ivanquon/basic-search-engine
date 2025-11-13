@@ -1,2 +1,4 @@
 sources
 saves
+indexes
+*.pyc
