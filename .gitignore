@@ -2,3 +2,5 @@ sources
 saves
 indexes
 *.pyc
+Logs
+sandbox.py
