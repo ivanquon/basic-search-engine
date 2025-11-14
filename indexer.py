@@ -17,6 +17,9 @@ class Posting:
         self.docid = docid
         self.tfidf = tfidf # use freq counts for now
         self.fields = fields
+    
+def tokenize(content: str) -> list[str]:
+    return re.findall(r"[a-zA-Z0-9]+", content)
 
 def offload_index(index: dict, docs: int) -> None:
     index_path = pathlib.Path(f"indexes/index{docs}.json")
@@ -52,7 +55,7 @@ def index_file(source_folder):
             print(data["url"])
             urlmap[docID] = data["url"]
             soup = BeautifulSoup(data["content"], from_encoding=data["encoding"])
-            tokens = word_tokenize(soup.get_text()) 
+            tokens = tokenize(soup.get_text()) 
             for token in tokens:
                 stemmed = stemmer.stem(token.lower())
                 if stemmed not in index:
