@@ -4,3 +4,6 @@ indexes
 *.pyc
 Logs
 sandbox.py
+*.pkl
+*.json
+*.txt
