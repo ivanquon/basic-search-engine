@@ -5,8 +5,10 @@ from nltk.stem import PorterStemmer
 from nltk.tokenize import word_tokenize
 import re
 import utils.logger
+from contextlib import ExitStack
+import heapq
 
-source_folder = "sources/DEV"
+source_folder = "sources/ANALYST"
 
 stemmer = PorterStemmer()
 
@@ -17,6 +19,19 @@ class Posting:
         self.docid = docid
         self.tfidf = tfidf # use freq counts for now
         self.fields = fields
+
+    def __eq__(self, other):
+        return self.docid == other.docid
+
+    def __lt__(self, other):
+        return self.docid < other.docid
+
+    def __hash__(self):
+        return hash(self.docid)
+    
+
+def posting_decoder(obj_dict):
+    return Posting(obj_dict["docid"], obj_dict["freq"])
     
 def tokenize(content: str) -> list[str]:
     return re.findall(r"[a-zA-Z0-9]+", content)
@@ -25,22 +40,25 @@ def offload_index(index: dict, docs: int) -> None:
     index_path = pathlib.Path(f"indexes/index{docs}.json")
     index_path.parent.mkdir(exist_ok=True, parents=True)
     with index_path.open("w") as file:
-        json.dump(index, file, indent=4)
+        for item in sorted(index.items()):
+            file.write(json.dumps(item) + "\n")
 
 def merge_indexes() -> None:
     indexes_path = pathlib.Path("indexes")
     paths = list(indexes_path.rglob("*.json"))
-    with open("merged_indexes.json", "w") as file:
-        json.dump(merge_helper(paths), file, indent= 4)
-
-def merge_helper(paths: list[pathlib.Path]) -> dict:
-    if len(paths) == 1:
-        with paths[0].open("r") as file:
-            return json.load(file)
-    else:
-        first_half = merge_helper(paths[:len(paths)//2])
-        second_half = merge_helper(paths[len(paths)//2:])
-        return {key : sorted(first_half.get(key,[]) + second_half.get(key,[]), key=lambda posting: posting["docid"]) for key in first_half.keys() | second_half.keys()}
+    with ExitStack() as stack:
+        with open("merged_indexes.json", "w") as out:
+            files = [stack.enter_context(open(path)) for path in paths]
+            lines = {file: file.readline() for file in files}
+            while lines.values():
+                min_term = json.loads(min(lines.values()))[0]
+                to_merge = {file: json.loads(lines[file], object_hook=posting_decoder)[1] for file in lines if json.loads(lines[file])[0]==min_term}
+                merged = list(heapq.merge(*to_merge.values()))
+                out.write(json.dumps({min_term: [item.__dict__ for item in merged]}) + "\n")
+                for f in to_merge.keys():
+                    lines[f] = f.readline()
+                    if lines[f] == "":
+                        del lines[f]
 
 def index_file(source_folder):
     index = dict()
@@ -67,7 +85,7 @@ def index_file(source_folder):
                     index[stemmed].append({"docid": docID, "freq": 1})
 
         docID += 1
-        if docID%10000 == 0:
+        if docID%100 == 0:
             offload_index(index, docID)
             index=dict()
     offload_index(index, docID)
@@ -75,7 +93,7 @@ def index_file(source_folder):
         json.dump(urlmap, file, indent=4)
     logger.info("INDEXING FINISHED")
     logger.info("MERGING STARTED")
-    merge_indexes()
+    #merge_indexes()
     logger.info("MERGING FINISHED")
 
 if __name__ == "__main__":

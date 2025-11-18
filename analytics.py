@@ -3,7 +3,7 @@ import utils.logger
 import os
 import pathlib
 
-source_folder = "sources/DEV"
+source_folder = "sources/ANALYST"
 
 if __name__ == "__main__":
     logger = utils.logger.get_logger("RESULTS")
