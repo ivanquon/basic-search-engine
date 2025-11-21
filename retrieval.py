@@ -2,32 +2,53 @@ from nltk.stem import PorterStemmer
 from indexer import tokenize
 import datetime
 import pickle
-from indexer import Posting
+from indexer import Posting, posting_decoder
+import json
 
 stemmer = PorterStemmer()
 
-fixed = "cristina lopes"
+#fixed = "masters of software engineering"
+#"ACM"
 #Store shortest posting as a base
 #Intersect each posting list after
 
 def boolean_and(postings: list[list[Posting]]):
-    common_objects = list(set(postings[0]).intersection(*postings[1:]))
-    return common_objects
+    by_length = sorted(postings, key = lambda p: len(p))
+    common = by_length[0]
+    for postings_list in by_length[1:]:
+        new_common = []
+        i = j = 0
+        while i < len(common) and j < len(postings_list):
+            if common[i] == postings_list[j]:
+                new_common.append(Posting(common[i].docid, common[i].tfidf + postings_list[j].tfidf, common[i].fields))
+                i+=1
+                j+=1
+            elif common[i] < postings_list[j]:
+                i+=1
+            else:
+                j+=1
+        common = new_common
+    return common
 
 if __name__ == "__main__":
-    #query = input("Enter your query: ")
-    query = fixed
-    with open("merged_indexes.pkl", "rb") as file:
-        index = pickle.load(file)
-    start = datetime.datetime.now()
+    with open("fastindex.json", "r") as fast:
+        fastindex = json.load(fast)
+    with open("urlmap.json", "r") as urlmap:
+        urls = json.load(urlmap)
+    while True:
+        query = input("Enter your query: ")
+        start = datetime.datetime.now()
+        with open("merged_indexes.json", "r") as index:
+            postings = []
+            processed_query = [stemmer.stem(token.lower()) for token in tokenize(query)]
+            for token in processed_query:
+                index.seek(fastindex[token])
+                postings.append(json.loads(index.readline(), object_hook=posting_decoder)[token])
+            common = boolean_and(postings)
+            ranked = sorted([posting for posting in common], key=lambda p: p.tfidf, reverse=True)
+            print([(urls[str(posting.docid)], posting.tfidf) for posting in ranked][:10])
 
-    processed_query = [stemmer.stem(token.lower()) for token in tokenize(query)]
-    postings = [index[token] for token in processed_query]
-    common = boolean_and(postings)
-    print(sorted([posting.docid for posting in common]))
-
-
-    end = datetime.datetime.now()
-    total = end - start
-    print(processed_query)
-    print(total.microseconds/1000)
+        end = datetime.datetime.now()
+        total = end - start
+        print(processed_query)
+        print(total.microseconds/1000)
