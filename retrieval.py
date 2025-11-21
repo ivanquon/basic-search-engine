@@ -46,9 +46,10 @@ if __name__ == "__main__":
                 postings.append(json.loads(index.readline(), object_hook=posting_decoder)[token])
             common = boolean_and(postings)
             ranked = sorted([posting for posting in common], key=lambda p: p.tfidf, reverse=True)
-            print([(urls[str(posting.docid)], posting.tfidf) for posting in ranked][:10])
+            top_five = [(urls[str(posting.docid)], posting.tfidf) for posting in ranked][:5]
+            for result in top_five:
+                print(result[0], "with a score of", result[1])
 
         end = datetime.datetime.now()
         total = end - start
-        print(processed_query)
-        print(total.microseconds/1000)
+        print("Query finished in", total.microseconds/1000, "ms")
