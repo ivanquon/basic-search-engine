@@ -2,18 +2,19 @@ import pathlib
 import json
 from bs4 import BeautifulSoup
 from nltk.stem import PorterStemmer
-from nltk.tokenize import word_tokenize
 import re
 import utils.logger
 from contextlib import ExitStack
 import heapq
 from math import log
+import shutil
 
 source_folder = "sources/DEV"
 
 stemmer = PorterStemmer()
 
-importance_values = {"title": 5, "h1": 2, "h2": 0.6, "h3": 0.3, "strong": 0.1}
+# importance_values = {"title": 5, "h1": 2, "h2": 0.6, "h3": 0.3, "strong": 0.1}
+importance_values = {"title": 16, "h1": 8, "h2": 4, "h3": 2, "strong": 1}
 
 logger = utils.logger.get_logger("INDEXER")
 
@@ -75,6 +76,7 @@ def merge_indexes(numDocs) -> None:
 def index_file(source_folder):
     index = dict()
     urlmap = dict()
+    dupes = set()
     p = pathlib.Path(source_folder)
     paths = p.rglob("*.json")
     docID = 0
@@ -83,24 +85,27 @@ def index_file(source_folder):
         with path.open("r") as file:
             data = json.load(file)
             print(data["url"])
-            urlmap[docID] = data["url"]
-            soup = BeautifulSoup(data["content"], from_encoding=data["encoding"])
-            tokens = tokenize(soup.get_text())
-            important = {(elem.name, stem) for elem in soup.find_all(["title", "h1", "h2", "h3", "strong"]) for stem in tokenize(elem.get_text())}
-            for token in tokens:
-                stemmed = stemmer.stem(token.lower())
-                if stemmed not in index:
-                    index[stemmed] = []
-                if index[stemmed] and index[stemmed][-1]["docid"] == docID:
-                    index[stemmed][-1]["tfidf"] += 1
-                else:
-                    index[stemmed].append({"docid": docID, "tfidf": 1, "fields": 0})
-                
-                for level in importance_values:
-                    if (level, stemmed) in important:
-                        index[stemmed][-1]["fields"] += importance_values[level]
-                        important.remove((level, stemmed))
-        docID += 1
+            checkhash=hash(data["content"])
+            if checkhash not in dupes:
+                dupes.add(checkhash)
+                urlmap[docID] = data["url"]
+                soup = BeautifulSoup(data["content"], from_encoding=data["encoding"])
+                tokens = tokenize(soup.get_text())
+                important = {(elem.name, stem.lower()) for elem in soup.find_all(["title", "h1", "h2", "h3", "strong"]) for stem in tokenize(elem.get_text())}
+                for token in tokens:
+                    stemmed = stemmer.stem(token.lower())
+                    if stemmed not in index:
+                        index[stemmed] = []
+                    if index[stemmed] and index[stemmed][-1]["docid"] == docID:
+                        index[stemmed][-1]["tfidf"] += 1
+                    else:
+                        index[stemmed].append({"docid": docID, "tfidf": 1, "fields": 0})
+                    
+                    for level in importance_values:
+                        if (level, stemmed) in important:
+                            index[stemmed][-1]["fields"] += importance_values[level]
+                            important.remove((level, stemmed))
+                docID += 1
         if docID%10000 == 0:
             offload_index(index, docID)
             index=dict()
@@ -113,4 +118,8 @@ def index_file(source_folder):
     logger.info("MERGING FINISHED")
 
 if __name__ == "__main__":
+    try: #Clean up past partial indexes before reindexing
+        shutil.rmtree("indexes")
+    except OSError as e:
+        raise e
     index_file(source_folder)

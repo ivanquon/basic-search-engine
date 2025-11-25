@@ -1,7 +1,6 @@
 from nltk.stem import PorterStemmer
 from indexer import tokenize
 import datetime
-import pickle
 from indexer import Posting, posting_decoder
 import json
 
