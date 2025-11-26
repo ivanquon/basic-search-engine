@@ -8,6 +8,7 @@ from contextlib import ExitStack
 import heapq
 from math import log
 import shutil
+import os
 
 source_folder = "sources/DEV"
 
@@ -37,7 +38,7 @@ class Posting:
         return f"Posting({self.docid}, {self.tfidf}, {self.fields})"
     
 
-def posting_decoder(obj_dict):
+def posting_decoder(obj_dict: dict):
     if "docid" in obj_dict.keys():
         return Posting(obj_dict["docid"], obj_dict["tfidf"], obj_dict["fields"])
     return obj_dict
@@ -52,7 +53,7 @@ def offload_index(index: dict, docs: int) -> None:
         for item in sorted(index.items()):
             file.write(json.dumps(item) + "\n")
 
-def merge_indexes(numDocs) -> None:
+def merge_indexes(numDocs: int) -> None:
     fastindex = dict()
     indexes_path = pathlib.Path("indexes")
     paths = list(indexes_path.rglob("*.json"))
@@ -73,7 +74,7 @@ def merge_indexes(numDocs) -> None:
     with open("fastindex.json", "w") as file:
         json.dump(fastindex, file, indent=4)
 
-def index_file(source_folder):
+def index_file(source_folder: str, bigrams: bool = False):
     index = dict()
     urlmap = dict()
     dupes = set()
@@ -91,9 +92,17 @@ def index_file(source_folder):
                 urlmap[docID] = data["url"]
                 soup = BeautifulSoup(data["content"], from_encoding=data["encoding"])
                 tokens = tokenize(soup.get_text())
-                important = {(elem.name, stem.lower()) for elem in soup.find_all(["title", "h1", "h2", "h3", "strong"]) for stem in tokenize(elem.get_text())}
+                if bigrams:
+                    tokens = [f"{stemmer.stem(s1)} {stemmer.stem(s2)}" for s1, s2 in zip(tokens, tokens[1:])]
+                    important = important = {(elem.name, f"{stemmer.stem(s1)} {stemmer.stem(s2)}") for elem in soup.find_all(["title", "h1", "h2", "h3", "strong"]) for tokenList in [tokenize(elem.get_text())] for s1, s2 in zip(tokenList, tokenList[1:])}
+                else:
+                    important = {(elem.name, stemmer.stem(token)) for elem in soup.find_all(["title", "h1", "h2", "h3", "strong"]) for token in tokenize(elem.get_text())}
                 for token in tokens:
-                    stemmed = stemmer.stem(token.lower())
+                    if bigrams:
+                        stemmed = token
+                    else:
+                        stemmed = stemmer.stem(token)
+                    
                     if stemmed not in index:
                         index[stemmed] = []
                     if index[stemmed] and index[stemmed][-1]["docid"] == docID:
@@ -106,9 +115,9 @@ def index_file(source_folder):
                             index[stemmed][-1]["fields"] += importance_values[level]
                             important.remove((level, stemmed))
                 docID += 1
-        if docID%10000 == 0:
-            offload_index(index, docID)
-            index=dict()
+                if docID%10000 == 0:
+                    offload_index(index, docID)
+                    index=dict()
     offload_index(index, docID)
     with open("urlmap.json", "w") as file:
         json.dump(urlmap, file, indent=4)
@@ -119,7 +128,11 @@ def index_file(source_folder):
 
 if __name__ == "__main__":
     try: #Clean up past partial indexes before reindexing
-        shutil.rmtree("indexes")
+        if os.path.isdir("indexes"):
+            shutil.rmtree("indexes")
     except OSError as e:
         raise e
-    index_file(source_folder)
+    if input("Bigram index (y/n): ").lower() == "y":
+        index_file(source_folder, True)
+    else:
+        index_file(source_folder)

@@ -30,6 +30,10 @@ def boolean_and(postings: list[list[Posting]]):
     return common
 
 if __name__ == "__main__":
+    if input("Bigram index (y/n): ").lower() == "y":
+        bigram = True
+    else:
+        bigram = False
     with open("fastindex.json", "r") as fast:
         fastindex = json.load(fast)
     with open("urlmap.json", "r") as urlmap:
@@ -39,7 +43,10 @@ if __name__ == "__main__":
         start = datetime.datetime.now()
         with open("merged_indexes.json", "r") as index:
             postings = []
-            processed_query = [stemmer.stem(token.lower()) for token in tokenize(query)]
+            if bigram:
+                processed_query = [f"{stemmer.stem(s1)} {stemmer.stem(s2)}" for tokenList in [tokenize(query)] for s1, s2 in zip(tokenList, tokenList[1:])]
+            else:
+                processed_query = [stemmer.stem(token) for token in tokenize(query)]
             for token in processed_query:
                 index.seek(fastindex[token])
                 postings.append(json.loads(index.readline(), object_hook=posting_decoder)[token])
