@@ -30,31 +30,42 @@ def boolean_and(postings: list[list[Posting]]):
     return common
 
 if __name__ == "__main__":
-    if input("Bigram index (y/n): ").lower() == "y":
-        bigram = True
-    else:
-        bigram = False
     with open("fastindex.json", "r") as fast:
         fastindex = json.load(fast)
     with open("urlmap.json", "r") as urlmap:
         urls = json.load(urlmap)
     while True:
         query = input("Enter your query: ")
+        if not query:
+            continue
         start = datetime.datetime.now()
+        unigram = len(query) == 1
         with open("merged_indexes.json", "r") as index:
-            postings = []
-            if bigram:
-                processed_query = [f"{stemmer.stem(s1)} {stemmer.stem(s2)}" for tokenList in [tokenize(query)] for s1, s2 in zip(tokenList, tokenList[1:])]
-            else:
-                processed_query = [stemmer.stem(token) for token in tokenize(query)]
-            for token in processed_query:
+            unigram_postings = []
+            bigram_postings = []
+            unigram_processed_query = [stemmer.stem(token) for token in tokenize(query)]
+            bigram_processed_query = [f"{stemmer.stem(s1)} {stemmer.stem(s2)}" for tokenList in [tokenize(query)] for s1, s2 in zip(tokenList, tokenList[1:])]
+
+            for token in unigram_processed_query:
                 index.seek(fastindex[token])
-                postings.append(json.loads(index.readline(), object_hook=posting_decoder)[token])
-            common = boolean_and(postings)
-            ranked = sorted([posting for posting in common], key=lambda p: p.tfidf, reverse=True)
-            top_five = [(urls[str(posting.docid)], posting.tfidf) for posting in ranked][:5]
-            for result in top_five:
+                unigram_postings.append(json.loads(index.readline(), object_hook=posting_decoder)[token])
+            unigram_ranked = sorted([posting for posting in boolean_and(unigram_postings)], key=lambda p: p.tfidf, reverse=True)
+
+            for token in bigram_processed_query:
+                index.seek(fastindex[token])
+                bigram_postings.append(json.loads(index.readline(), object_hook=posting_decoder)[token])
+            bigram_ranked = sorted([posting for posting in boolean_and(bigram_postings)], key=lambda p: p.tfidf, reverse=True)
+
+            unigram_top_five = [(urls[str(posting.docid)], posting.tfidf) for posting in unigram_ranked][:5]
+            bigram_top_five = [(urls[str(posting.docid)], posting.tfidf) for posting in bigram_ranked][:5]
+
+            print("UNIGRAM RESULTS")
+            for result in unigram_top_five:
                 print(result[0], "with a score of", result[1])
+            print("BIGRAM RESULTS")
+            for result in bigram_top_five:
+                print(result[0], "with a score of", result[1])
+
 
         end = datetime.datetime.now()
         total = end - start

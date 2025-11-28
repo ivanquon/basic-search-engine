@@ -74,7 +74,7 @@ def merge_indexes(numDocs: int) -> None:
     with open("fastindex.json", "w") as file:
         json.dump(fastindex, file, indent=4)
 
-def index_file(source_folder: str, bigrams: bool = False):
+def index_file(source_folder: str):
     index = dict()
     urlmap = dict()
     dupes = set()
@@ -91,29 +91,24 @@ def index_file(source_folder: str, bigrams: bool = False):
                 dupes.add(checkhash)
                 urlmap[docID] = data["url"]
                 soup = BeautifulSoup(data["content"], from_encoding=data["encoding"])
-                tokens = tokenize(soup.get_text())
-                if bigrams:
-                    tokens = [f"{stemmer.stem(s1)} {stemmer.stem(s2)}" for s1, s2 in zip(tokens, tokens[1:])]
-                    important = important = {(elem.name, f"{stemmer.stem(s1)} {stemmer.stem(s2)}") for elem in soup.find_all(["title", "h1", "h2", "h3", "strong"]) for tokenList in [tokenize(elem.get_text())] for s1, s2 in zip(tokenList, tokenList[1:])}
-                else:
-                    important = {(elem.name, stemmer.stem(token)) for elem in soup.find_all(["title", "h1", "h2", "h3", "strong"]) for token in tokenize(elem.get_text())}
-                for token in tokens:
-                    if bigrams:
-                        stemmed = token
-                    else:
-                        stemmed = stemmer.stem(token)
-                    
-                    if stemmed not in index:
-                        index[stemmed] = []
-                    if index[stemmed] and index[stemmed][-1]["docid"] == docID:
-                        index[stemmed][-1]["tfidf"] += 1
-                    else:
-                        index[stemmed].append({"docid": docID, "tfidf": 1, "fields": 0})
-                    
-                    for level in importance_values:
-                        if (level, stemmed) in important:
-                            index[stemmed][-1]["fields"] += importance_values[level]
-                            important.remove((level, stemmed))
+                unigram_tokens = [stemmer.stem(token) for token in tokenize(soup.get_text())]
+                bigram_tokens = [f"{t1} {t2}" for t1, t2 in zip(unigram_tokens, unigram_tokens[1:])] 
+                unigram_important = {(elem.name, stemmer.stem(token)) for elem in soup.find_all(["title", "h1", "h2", "h3", "strong"]) for token in tokenize(elem.get_text())}
+                bigram_important = {(elem.name, f"{stemmer.stem(s1)} {stemmer.stem(s2)}") for elem in soup.find_all(["title", "h1", "h2", "h3", "strong"]) for tokenList in [tokenize(elem.get_text())] for s1, s2 in zip(tokenList, tokenList[1:])}
+
+                for tokenList, importantSet in [(unigram_tokens, unigram_important),(bigram_tokens, bigram_important)]:
+                    for token in tokenList:
+                        if token not in index:
+                            index[token] = []
+                        if index[token] and index[token][-1]["docid"] == docID:
+                            index[token][-1]["tfidf"] += 1
+                        else:
+                            index[token].append({"docid": docID, "tfidf": 1, "fields": 0})
+                        
+                        for level in importance_values:
+                            if (level, token) in importantSet:
+                                index[token][-1]["fields"] += importance_values[level]
+                                importantSet.remove((level, token))
                 docID += 1
                 if docID%10000 == 0:
                     offload_index(index, docID)
@@ -132,7 +127,4 @@ if __name__ == "__main__":
             shutil.rmtree("indexes")
     except OSError as e:
         raise e
-    if input("Bigram index (y/n): ").lower() == "y":
-        index_file(source_folder, True)
-    else:
-        index_file(source_folder)
+    index_file(source_folder)
