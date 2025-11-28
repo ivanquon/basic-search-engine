@@ -39,33 +39,22 @@ if __name__ == "__main__":
         if not query:
             continue
         start = datetime.datetime.now()
-        unigram = len(query) == 1
         with open("merged_indexes.json", "r") as index:
-            unigram_postings = []
-            bigram_postings = []
-            unigram_processed_query = [stemmer.stem(token) for token in tokenize(query)]
-            bigram_processed_query = [f"{stemmer.stem(s1)} {stemmer.stem(s2)}" for tokenList in [tokenize(query)] for s1, s2 in zip(tokenList, tokenList[1:])]
+            postings = []
+            tokenized_query = tokenize(query)
+            unigram = len(tokenized_query) == 1
+            precessed_query = [stemmer.stem(token) for token in tokenize(query)] if unigram else [f"{stemmer.stem(s1)} {stemmer.stem(s2)}" for tokenList in [tokenize(query)] for s1, s2 in zip(tokenList, tokenList[1:])]
 
-            for token in unigram_processed_query:
+            for token in precessed_query:
                 index.seek(fastindex[token])
-                unigram_postings.append(json.loads(index.readline(), object_hook=posting_decoder)[token])
-            unigram_ranked = sorted([posting for posting in boolean_and(unigram_postings)], key=lambda p: p.tfidf, reverse=True)
+                postings.append(json.loads(index.readline(), object_hook=posting_decoder)[token])
+            ranked = sorted([posting for posting in boolean_and(postings)], key=lambda p: p.tfidf, reverse=True)
 
-            for token in bigram_processed_query:
-                index.seek(fastindex[token])
-                bigram_postings.append(json.loads(index.readline(), object_hook=posting_decoder)[token])
-            bigram_ranked = sorted([posting for posting in boolean_and(bigram_postings)], key=lambda p: p.tfidf, reverse=True)
+            top_five = [(urls[str(posting.docid)], posting.tfidf) for posting in ranked][:5]
 
-            unigram_top_five = [(urls[str(posting.docid)], posting.tfidf) for posting in unigram_ranked][:5]
-            bigram_top_five = [(urls[str(posting.docid)], posting.tfidf) for posting in bigram_ranked][:5]
-
-            print("UNIGRAM RESULTS")
-            for result in unigram_top_five:
+            print("RESULTS")
+            for result in top_five:
                 print(result[0], "with a score of", result[1])
-            print("BIGRAM RESULTS")
-            for result in bigram_top_five:
-                print(result[0], "with a score of", result[1])
-
 
         end = datetime.datetime.now()
         total = end - start
