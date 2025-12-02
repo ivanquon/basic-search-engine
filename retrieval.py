@@ -47,6 +47,32 @@ def boolean_and(postings: list[list[Posting]]) -> list:
         common = new_common
     return common
 
+def retrieve(query: str):
+    start = datetime.datetime.now()
+    with open("merged_indexes.json", "r") as index:
+        postings = []
+        tokenized_query = tokenize(query)
+        unigram = len(tokenized_query) == 1
+        precessed_query = [stemmer.stem(token) for token in tokenize(query)] if unigram else [f"{stemmer.stem(s1)} {stemmer.stem(s2)}" for tokenList in [tokenize(query)] for s1, s2 in zip(tokenList, tokenList[1:])]
+
+        for token in precessed_query:
+            try:
+                index.seek(fastindex[token])
+                postings.append(json.loads(index.readline(), object_hook=posting_decoder)[token])
+            except KeyError:
+                continue
+        ranked = sorted([posting for posting in boolean_and(postings)], key=lambda p: p.tfidf, reverse=True)
+
+        top_five = [(urls[str(posting.docid)], posting.tfidf) for posting in ranked][:5]
+
+        print("RESULTS")
+        for result in top_five:
+            print(result[0], "with a score of", result[1])
+
+    end = datetime.datetime.now()
+    total = end - start
+    print("Query finished in", total.microseconds/1000, "ms")
+
 if __name__ == "__main__":
     with open("fastindex.json", "r") as fast:
         fastindex = json.load(fast)
@@ -56,27 +82,4 @@ if __name__ == "__main__":
         query = input("Enter your query: ")
         if not query:
             continue
-        start = datetime.datetime.now()
-        with open("merged_indexes.json", "r") as index:
-            postings = []
-            tokenized_query = tokenize(query)
-            unigram = len(tokenized_query) == 1
-            precessed_query = [stemmer.stem(token) for token in tokenize(query)] if unigram else [f"{stemmer.stem(s1)} {stemmer.stem(s2)}" for tokenList in [tokenize(query)] for s1, s2 in zip(tokenList, tokenList[1:])]
-
-            for token in precessed_query:
-                try:
-                    index.seek(fastindex[token])
-                    postings.append(json.loads(index.readline(), object_hook=posting_decoder)[token])
-                except KeyError:
-                    continue
-            ranked = sorted([posting for posting in boolean_and(postings)], key=lambda p: p.tfidf, reverse=True)
-
-            top_five = [(urls[str(posting.docid)], posting.tfidf) for posting in ranked][:5]
-
-            print("RESULTS")
-            for result in top_five:
-                print(result[0], "with a score of", result[1])
-
-        end = datetime.datetime.now()
-        total = end - start
-        print("Query finished in", total.microseconds/1000, "ms")
+        retrieve(query)
