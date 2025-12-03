@@ -1,10 +1,17 @@
-from typing import Union
-
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from retrieval import retrieve
 import json
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],   # or ["http://localhost:3000"]
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 with open("fastindex.json", "r") as fast:
     fastindex = json.load(fast)

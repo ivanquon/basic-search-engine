@@ -1,0 +1,55 @@
+body {
+  background: #ffffff;
+  font-family: Arial, Helvetica, sans-serif, serif;
+}
+
+#header {
+  border-bottom: 1px solid black;
+  display: flex;
+  align-items: center;
+  padding-bottom: 10px;
+  gap: 10px;
+}
+
+#header form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.logo-container {
+  font-size: 0;
+}
+
+.logo {
+  font-weight: bold;
+  font-size: 3rem;
+  color: #255799;
+  text-shadow: 2px 2px 2px black;
+}
+
+.blue {
+  color: #4285f4;
+}
+
+.red {
+  color: #ea4335;
+}
+
+.yellow {
+  color: #fbbc05;
+}
+
+.green {
+  color: #34a853;
+}
+
+#urls {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+li {
+  padding-top: 10px;
+}
