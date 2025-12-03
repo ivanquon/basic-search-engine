@@ -1,5 +1,5 @@
 from nltk.stem import PorterStemmer
-from indexer import tokenize
+from indexer import stem_tokenize
 import datetime
 from indexer import Posting, posting_decoder
 import json
@@ -69,9 +69,9 @@ def retrieve(query: str, fastindex, urls):
     start = datetime.datetime.now()
     with open("merged_indexes.json", "r") as index:
         postings = []
-        tokenized_query = tokenize(query)
-        unigram = len(tokenized_query) == 1
-        precessed_query = [stemmer.stem(token) for token in tokenize(query)] if unigram else [f"{stemmer.stem(s1)} {stemmer.stem(s2)}" for tokenList in [tokenize(query)] for s1, s2 in zip(tokenList, tokenList[1:])]
+        stem_tokenized_query = stem_tokenize(query)
+        unigram = len(stem_tokenized_query) == 1
+        precessed_query = stem_tokenized_query if unigram else [f"{s1} {s2}" for s1, s2 in zip(stem_tokenized_query, stem_tokenized_query[1:])]
 
         for token in precessed_query:
             #Return as many matches as possible (if full match not available do partial)

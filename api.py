@@ -19,7 +19,3 @@ def read_root():
 def search_query(query: str):
     results = retrieve(query, fastindex, urls)
     return {"urls": results[0], "mstime": results[1]}
-
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: Union[str, None] = None):
-    return {"item_id": item_id, "q": q}
