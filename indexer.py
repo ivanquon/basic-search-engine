@@ -95,10 +95,10 @@ def index_file(source_folder: str):
                 urlmap[docID] = data["url"]
                 soup = BeautifulSoup(data["content"], 'lxml')
                 unigram_tokens = stem_tokenize(soup.get_text(separator=" ", strip=True))
-                bigram_tokens = [f"{t1} {t2}" for t1, t2 in zip(unigram_tokens, unigram_tokens[1:])] 
-                important_tags = [(elem.name, stem_tokenize(elem.get_text(separator=", ", strip=True))) for elem in soup.find_all(["title", "h1", "h2", "h3", "strong"])]
-                unigram_important = [(important[0], token) for important in important_tags for token in important[1]]
-                bigram_important = [(important[0], f"{s1} {s2}") for important in important_tags for s1, s2 in zip(important[1], important[1][1:])]
+                bigram_tokens = (f"{t1} {t2}" for t1, t2 in zip(unigram_tokens, unigram_tokens[1:]))
+                important_tags = ((elem.name, stem_tokenize(elem.get_text(separator=" ", strip=True))) for elem in soup.find_all(["title", "h1", "h2", "h3", "strong"]))
+                unigram_important = ((important[0], token) for important in important_tags for token in important[1])
+                bigram_important = ((important[0], f"{s1} {s2}") for important in important_tags for s1, s2 in zip(important[1], important[1][1:]))
 
                 for tokenList in [unigram_tokens, bigram_tokens]:
                     for token in tokenList:
@@ -112,7 +112,7 @@ def index_file(source_folder: str):
                     for level, token in importantList:
                         index[token][-1]["fields"] += importance_values[level]
                 docID += 1
-                if docID%50000 == 0:
+                if docID%10000 == 0:
                     logger.info(f"{docID} FINISHED")
                     offload_index(index, docID)
                     index.clear()
