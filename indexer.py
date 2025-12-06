@@ -132,6 +132,8 @@ if __name__ == "__main__":
     except OSError as e:
         raise e
     source_folder = input("Input directory for sources (Default is sources/DEV): ")
+    if not source_folder:
+        source_folder = "sources/DEV"
     try:
         index_file(source_folder)
     except:
