@@ -1,6 +1,6 @@
 body {
   background: #ffffff;
-  font-family: Cormorant, Arial, sans-serif, serif;
+  font-family: Arial, sans-serif, serif;
 }
 
 #header {
@@ -26,6 +26,7 @@ body {
   font-size: 3rem;
   color: #255799;
   text-shadow: 2px 2px 2px black;
+  font-family: Cormorant, Arial, sans-serif, serif;
 }
 
 .blue {

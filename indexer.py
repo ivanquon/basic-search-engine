@@ -131,4 +131,8 @@ if __name__ == "__main__":
             shutil.rmtree("indexes")
     except OSError as e:
         raise e
-    index_file(source_folder)
+    source_folder = input("Input directory for sources (Default is sources/DEV): ")
+    try:
+        index_file(source_folder)
+    except:
+        print("Invalid source folder")
