@@ -5,4 +5,4 @@
 ` {"url": "https://www.cs.uci.edu/research-centers/", "content": "<!DOCTYPE html>\n<html lang=\"en-US\">\n<head > . . .", "encoding": "ascii"} `
 2. Run indexer.py on source folder (Indexing time may vary based on # of files and length)
 3. Run retrieval.py and input search queries
-4. (Optional) Open frontend/index.html for a web UI
+4. (Optional) Run api.py and open frontend/index.html for a web UI
