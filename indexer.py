@@ -55,7 +55,9 @@ def offload_index(index: dict, docs: int) -> None:
     with index_path.open("w") as file:
         for item in sorted(index.items()):
             file.write(json.dumps(item) + "\n")
-
+"""
+Concurrent file indexing using a file stack used in index_file
+"""
 def merge_indexes(numDocs: int) -> None:
     fastindex = dict()
     indexes_path = pathlib.Path("indexes")
@@ -77,6 +79,9 @@ def merge_indexes(numDocs: int) -> None:
     with open("fastindex.json", "w") as file:
         json.dump(fastindex, file, indent=4)
 
+"""
+Indexes source folder .json files, removes dupes, and then offloads to a urlmap. Then merges all the indexes.
+"""
 def index_file(source_folder: str):
     index = dict()
     urlmap = dict()
