@@ -44,7 +44,9 @@ test_queries = [
 
 #Store shortest posting as a base
 #Intersect each posting list after
-
+"""
+Boolean comparisons between postings
+"""
 def boolean_and(postings: list[list[Posting]]) -> list:
     if not postings:
         return []
@@ -64,7 +66,9 @@ def boolean_and(postings: list[list[Posting]]) -> list:
                 j+=1
         common = new_common
     return common
-
+"""
+Returns top five results for a query and marks time taken
+"""
 def retrieve(query: str, fastindex, urls):
     start = datetime.datetime.now()
     with open("merged_indexes.json", "r") as index:
